@@ -64,12 +64,12 @@ static const uint32_t DIGITS[10] =
     A|B|C|D|E|F|G, // 8
     A|B|C|D|F|G    // 9
 };
-
-static const uint32_t POSITIONS[4] =
+//dislay works without two middle fields
+static const uint32_t POSITIONS[2] =
 {
          POS1|POS2|POS3, // 0
-    POS0     |POS2|POS3, // 1
-    POS0|POS1     |POS3, // 2
+    //POS0     |POS2|POS3, // 1
+    //POS0|POS1     |POS3, // 2
     POS0|POS1|POS2       // 3
 };
 
@@ -82,9 +82,9 @@ struct Seg7Display
 
 void SEG7_set_number_quarter(struct Seg7Display* seg7, unsigned tick)
 {
-    uint32_t divisors[4] = {1, 10, 100, 1000};
+    uint32_t divisors[2] = {1, 1000};
 
-    unsigned quarter = tick % 4;
+    unsigned quarter = tick % 2;
     unsigned divisor = divisors[quarter];
 
     seg7->display = DIGITS[(seg7->number / divisor) % 10] | POSITIONS[quarter];
@@ -205,6 +205,9 @@ void board_gpio_init()
 	*GPIOC_TYPER |= 0b0U << 9U;
 }
 
+//gpio led offset
+#define GPIOC_ODR_OFFSET 0x14U
+
 bool is_GPIOB_IDR_active(unsigned port_num)
 {
     return *GPIOB_IDR & (1U << port_num);
@@ -261,21 +264,20 @@ void calculate_results (char* results, enum Objects* objects)
 
 void set_GPIOC_ODR (unsigned num_bit, bool value)
 {
-    //GPIOC_MODER + 0x14U
     if (value)
-		*(volatile uint32_t*)(uintptr_t)0x48000814U |= (1 << num_bit);
+		*(volatile uint32_t*)(uintptr_t)((unsigned)GPIOC_MODER + GPIOC_ODR_OFFSET) |= (1 << num_bit);
 	else
-		*(volatile uint32_t*)(uintptr_t)0x48000814U &= ~(1 << num_bit);
+		*(volatile uint32_t*)(uintptr_t)((unsigned)GPIOC_MODER + GPIOC_ODR_OFFSET) &= ~(1 << num_bit);
 }
 
 void reverse_GPIOC_ODR (unsigned num_bit)
 {
-    *(volatile uint32_t*)(uintptr_t)0x48000814U ^= (1 << num_bit);
+    *(volatile uint32_t*)(uintptr_t)((unsigned)GPIOC_MODER + GPIOC_ODR_OFFSET) ^= (1 << num_bit);
 }
 
 bool is_GPIOC_ODR_bit_enable(int num_bit)
 {
-    return *(volatile uint32_t*)(uintptr_t)0x48000814U & (1 << num_bit);
+    return *(volatile uint32_t*)(uintptr_t)((unsigned)GPIOC_MODER + GPIOC_ODR_OFFSET) & (1 << num_bit);
 }
 
 void blinked_leds ()
@@ -323,14 +325,17 @@ int main()
 	enum Objects objects[2];
 	bool is_first_led_enable = 0;
 
+    #define stone_button_pin 1
+    #define scissors_button_pin 2
+    #define paper_button_pin 10
 	while (1)
     {
         // Update button state:
-        bool stone_active = is_GPIOB_IDR_active(1);
+        bool stone_active = is_GPIOB_IDR_active(stone_button_pin);
 		stone_button_was_pressed = check_button_on_press(stone_active, &stone_saturation);
-        bool scissors_active = is_GPIOB_IDR_active(2);
+        bool scissors_active = is_GPIOB_IDR_active(scissors_button_pin);
 		scissors_button_was_pressed = check_button_on_press(scissors_active, &scissors_saturation);
-        bool paper_active = is_GPIOB_IDR_active(10);
+        bool paper_active = is_GPIOB_IDR_active(paper_button_pin);
 		paper_button_was_pressed = check_button_on_press(paper_active, &paper_saturation);
 
 		if (stone_button_was_pressed) {
@@ -361,7 +366,7 @@ int main()
 	    }
 
         // Render display state:
-        //SEG7_set_number_quarter(&seg7, tick);
+        SEG7_set_number_quarter(&seg7, tick);
 		seg7.number = get_number_from_result(results);
         SEG7_push_display_state_to_mc(&seg7);
 
