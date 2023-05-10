@@ -33,7 +33,7 @@
 // 7-segment display
 //-------------------
 
-// SUPER-DUPER TRUSTWORTHY Pin Mapping:
+// Pin Mapping:
 #define A  0x0800U
 #define B  0x0080U
 #define C  0x0010U
@@ -208,6 +208,11 @@ void board_gpio_init()
 //gpio led offset
 #define GPIOC_ODR_OFFSET 0x14U
 
+const int STONE_BOTTONE_PIN = 1;
+const int SCISSORS_BUTTON_PIN = 2;
+const int PAPER_BUTTON_PIN = 10;
+
+
 bool is_GPIOB_IDR_active(unsigned port_num)
 {
     return *GPIOB_IDR & (1U << port_num);
@@ -325,17 +330,14 @@ int main()
 	enum Objects objects[2];
 	bool is_first_led_enable = 0;
 
-    #define stone_button_pin 1
-    #define scissors_button_pin 2
-    #define paper_button_pin 10
 	while (1)
     {
         // Update button state:
-        bool stone_active = is_GPIOB_IDR_active(stone_button_pin);
+        bool stone_active = is_GPIOB_IDR_active(STONE_BOTTONE_PIN);
 		stone_button_was_pressed = check_button_on_press(stone_active, &stone_saturation);
-        bool scissors_active = is_GPIOB_IDR_active(scissors_button_pin);
+        bool scissors_active = is_GPIOB_IDR_active(SCISSORS_BUTTON_PIN);
 		scissors_button_was_pressed = check_button_on_press(scissors_active, &scissors_saturation);
-        bool paper_active = is_GPIOB_IDR_active(paper_button_pin);
+        bool paper_active = is_GPIOB_IDR_active(PAPER_BUTTON_PIN);
 		paper_button_was_pressed = check_button_on_press(paper_active, &paper_saturation);
 
 		if (stone_button_was_pressed) {
